@@ -15,6 +15,10 @@ uniform vec4 wave_a = vec4(0.5, 0.0, 0.1, 5.0);
 uniform vec4 wave_b = vec4(0.4, 0.3, 0.075, 3.0);
 uniform vec4 wave_c = vec4(-0.1, 0.15, 0.05, 2.0);
 
+
+uniform float fade_start = 30.0;
+uniform float fade_end = 80.0;
+
 // 3. VARYING: Diese Variable reicht die Höhe vom Vertex- zum Fragment-Shader durch
 varying float wave_height_var;
 
@@ -43,6 +47,10 @@ void vertex() {
     displacement += gerstner_wave(wave_a, world_pos, TIME);
     displacement += gerstner_wave(wave_b, world_pos, TIME);
     displacement += gerstner_wave(wave_c, world_pos, TIME);
+	
+	float dist = distance(world_pos, CAMERA_POSITION_WORLD);
+	float fade = 1.0 - smoothstep(fade_start, fade_end, dist);
+	displacement *= fade;
 
     // Wir speichern nur die Y-Verschiebung (die Auslenkung nach oben/unten) für die Farbe
     wave_height_var = displacement.y;
