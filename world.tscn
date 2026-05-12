@@ -11,7 +11,8 @@ sky_material = SubResource("ProceduralSkyMaterial_f3sb7")
 background_mode = 2
 sky = SubResource("Sky_fj7yv")
 fog_enabled = true
-fog_sky_affect = 0.75
+fog_density = 0.005
+fog_aerial_perspective = 0.75
 
 [node name="World" type="Node3D" unique_id=1617718502]
 
