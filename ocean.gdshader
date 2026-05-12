@@ -9,7 +9,7 @@ uniform vec3 color_foam : source_color = vec3(0.9, 0.9, 0.95);    // Weiß/Schau
 uniform float foam_level = 0.5;  // Ab welcher Höhe (Y) der Schaum beginnt
 uniform float deep_level = -0.2; // Ab welcher Tiefe (Y) das Wasser dunkel wird
 
-uniform float time_scale = 0.1;
+uniform float time_scale = 0.5;
 
 uniform vec4 wave_a = vec4(0.5, 0.0, 0.1, 5.0);
 uniform vec4 wave_b = vec4(0.4, 0.3, 0.075, 3.0);

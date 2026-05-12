@@ -1,3 +1,4 @@
+@tool
 extends Node3D
 
 @export var water_material: ShaderMaterial
@@ -14,6 +15,12 @@ extends Node3D
 var chunks = {} # Speichert unsere Chunk-Instanzen
 
 func _ready():
+	# WICHTIG FÜR @TOOL: Alte Chunks aus dem Editor löschen, 
+	# bevor neue generiert werden (verhindert Datenmüll)
+	for child in get_children():
+		child.queue_free()
+	chunks.clear()
+	
 	# Generiere das initiale Gitter
 	for x in range(-grid_radius, grid_radius + 1):
 		for z in range(-grid_radius, grid_radius + 1):
