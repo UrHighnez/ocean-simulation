@@ -9,9 +9,9 @@ uniform float foam_level = 0.08;
 uniform float deep_level = -0.05;
 uniform float time_scale = 0.1;
 
-uniform vec4 wave_a = vec4(0.5, 0.0, 0.1, 5.0);
-uniform vec4 wave_b = vec4(0.4, 0.3, 0.075, 3.0);
-uniform vec4 wave_c = vec4(-0.1, 0.15, 0.05, 2.0);
+uniform vec4 wave_a = vec4(5.1, 0.3, 1.7, 52);
+uniform vec4 wave_b = vec4(0.43, 0.31, 0.077, 3.1);
+uniform vec4 wave_c = vec4(-0.12, 0.13, 0.054, 2.3);
 
 uniform float fade_start = 30.0;
 uniform float fade_end = 80.0;
@@ -27,15 +27,15 @@ varying float wave_height_var;
 varying float horizon_fade_var;
 varying vec2 world_xz_var; 
 
-vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier) {
+vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier, float phase_offset) {
     float steepness = wave.z * multiplier;
     float wavelength = wave.w;
     
     float k = 2.0 * PI / wavelength;
     float c = sqrt(9.8 / k);
-    
     vec2 d = normalize(wave.xy);
-    float f = k * (dot(d, p.xz) - c * time * time_scale);
+    
+    float f = k * (dot(d, p.xz) - c * time * time_scale) + phase_offset;
     float a = steepness / k;
 
     return vec3(
@@ -45,32 +45,38 @@ vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier) {
     );
 }
 
-vec3 get_wave_displacement(vec3 p, float time, float multiplier) {
+vec3 get_wave_displacement(vec3 p, float time, float multiplier, float phase_offset) {
     vec3 d = vec3(0.0);
-    d += gerstner_wave(wave_a, p, time, multiplier);
-    d += gerstner_wave(wave_b, p, time, multiplier);
-    d += gerstner_wave(wave_c, p, time, multiplier);
+    // Wir multiplizieren die Zeit für Welle B und C minimal (z.B. * 1.1), 
+    // damit sie nicht für immer synchron mit Welle A laufen.
+    d += gerstner_wave(wave_a, p, time, multiplier, phase_offset);
+    d += gerstner_wave(wave_b, p, time * 1.1, multiplier, phase_offset * 1.2);
+    d += gerstner_wave(wave_c, p, time * 0.9, multiplier, phase_offset * 1.5);
     return d;
 }
 
 void vertex() {
     vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-    
-    // Wir speichern die unverschobenen Welt-Koordinaten für den Fragment-Shader
     world_xz_var = world_pos.xz;
     
     vec2 noise_uv = world_pos.xz * noise_scale + (TIME * 0.01);
     float noise_val = texture(wave_noise, noise_uv).r; 
+    
     float height_multiplier = mix(0.3, 1.5, noise_val);
     
-    vec3 displacement = get_wave_displacement(world_pos, TIME, height_multiplier);
+    // Wir wandeln den Noise (0.0 bis 1.0) in eine Verzerrung um (-0.5 bis 0.5) 
+    // und multiplizieren sie z.B. mit 3.0, um die Rillen stark zu verbiegen.
+    float phase_warp = (noise_val - 0.5) * 3.0; 
+    
+    // Wir übergeben den Warp an die Verschiebungs-Berechnung
+    vec3 displacement = get_wave_displacement(world_pos, TIME, height_multiplier, phase_warp);
 
     float e = 0.1; 
     vec3 px = world_pos + vec3(e, 0.0, 0.0);
     vec3 pz = world_pos + vec3(0.0, 0.0, e);
 
-    vec3 displacement_x = get_wave_displacement(px, TIME, height_multiplier);
-    vec3 displacement_z = get_wave_displacement(pz, TIME, height_multiplier);
+    vec3 displacement_x = get_wave_displacement(px, TIME, height_multiplier, phase_warp);
+    vec3 displacement_z = get_wave_displacement(pz, TIME, height_multiplier, phase_warp);
 
     vec3 p0 = world_pos + displacement;
     vec3 p1 = px + displacement_x;
