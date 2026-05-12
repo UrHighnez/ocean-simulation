@@ -2,6 +2,14 @@
 
 [ext_resource type="Shader" uid="uid://vwayivcyyfi" path="res://ocean.gdshader" id="1_pmio7"]
 
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_pmio7"]
+noise_type = 2
+frequency = 0.05
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_mcwpg"]
+noise = SubResource("FastNoiseLite_pmio7")
+seamless = true
+
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_mcwpg"]
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_6lqol"]
@@ -11,8 +19,8 @@ seamless = true
 [resource]
 render_priority = 0
 shader = ExtResource("1_pmio7")
-shader_parameter/color_deep = Color(0.050980393, 0.14901961, 0.3019608, 1)
-shader_parameter/color_shallow = Color(0.1, 0.4, 0.6, 1)
+shader_parameter/color_deep = Color(0.070236586, 0.2600043, 0.3396959, 1)
+shader_parameter/color_shallow = Color(0.14765078, 0.44243854, 0.5150507, 1)
 shader_parameter/color_foam = Color(0.9, 0.9, 0.95, 1)
 shader_parameter/horizon_color = Color(0.5, 0.6, 0.7, 1)
 shader_parameter/foam_level = 0.125
@@ -25,3 +33,6 @@ shader_parameter/fade_start = 30.0
 shader_parameter/fade_end = 80.0
 shader_parameter/wave_noise = SubResource("NoiseTexture2D_6lqol")
 shader_parameter/noise_scale = 0.02
+shader_parameter/foam_noise = SubResource("NoiseTexture2D_mcwpg")
+shader_parameter/foam_noise_scale = 0.3
+shader_parameter/foam_distortion = 0.15

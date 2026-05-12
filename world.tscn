@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://cvaw6kwh8c8f7" path="res://ocean_manager.tscn" id="1_f3sb7"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_f3sb7"]
+ground_bottom_color = Color(0.14931333, 0.16577256, 0.2676466, 1)
 ground_horizon_color = Color(0.5019608, 0.6, 0.7019608, 1)
 
 [sub_resource type="Sky" id="Sky_fj7yv"]

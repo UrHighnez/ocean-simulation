@@ -3,7 +3,6 @@ shader_type spatial;
 uniform vec3 color_deep : source_color = vec3(0.05, 0.15, 0.3);
 uniform vec3 color_shallow : source_color = vec3(0.1, 0.4, 0.6);
 uniform vec3 color_foam : source_color = vec3(0.9, 0.9, 0.95);
-
 uniform vec3 horizon_color : source_color = vec3(0.5, 0.6, 0.7);
 
 uniform float foam_level = 0.08;
@@ -20,8 +19,13 @@ uniform float fade_end = 80.0;
 uniform sampler2D wave_noise;
 uniform float noise_scale = 0.02;
 
+uniform sampler2D foam_noise; // Die Textur für die Risse im Schaum
+uniform float foam_noise_scale = 0.2; // Wie klein/fein die Risse sind
+uniform float foam_distortion = 0.08; // Wie stark der Rand zerfetzt wird
+
 varying float wave_height_var;
 varying float horizon_fade_var;
+varying vec2 world_xz_var; 
 
 vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier) {
     float steepness = wave.z * multiplier;
@@ -41,7 +45,6 @@ vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier) {
     );
 }
 
-// --- NEU: Hilfsfunktion, um den Code aufgeräumt zu halten ---
 vec3 get_wave_displacement(vec3 p, float time, float multiplier) {
     vec3 d = vec3(0.0);
     d += gerstner_wave(wave_a, p, time, multiplier);
@@ -53,15 +56,15 @@ vec3 get_wave_displacement(vec3 p, float time, float multiplier) {
 void vertex() {
     vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
     
+    // Wir speichern die unverschobenen Welt-Koordinaten für den Fragment-Shader
+    world_xz_var = world_pos.xz;
+    
     vec2 noise_uv = world_pos.xz * noise_scale + (TIME * 0.01);
     float noise_val = texture(wave_noise, noise_uv).r; 
     float height_multiplier = mix(0.3, 1.5, noise_val);
     
-    // 1. Die Wellen-Verschiebung am aktuellen Punkt
     vec3 displacement = get_wave_displacement(world_pos, TIME, height_multiplier);
 
-    // --- NEU: BERECHNUNG DER WEICHEN OBERFLÄCHE ---
-    // 2. Wir tasten das Wasser 10cm weiter auf der X- und Z-Achse ab
     float e = 0.1; 
     vec3 px = world_pos + vec3(e, 0.0, 0.0);
     vec3 pz = world_pos + vec3(0.0, 0.0, e);
@@ -69,24 +72,18 @@ void vertex() {
     vec3 displacement_x = get_wave_displacement(px, TIME, height_multiplier);
     vec3 displacement_z = get_wave_displacement(pz, TIME, height_multiplier);
 
-    // Die echten 3D-Positionen der drei Punkte
     vec3 p0 = world_pos + displacement;
     vec3 p1 = px + displacement_x;
     vec3 p2 = pz + displacement_z;
 
-    // Das Kreuzprodukt der benachbarten Punkte ergibt die perfekte, weiche Krümmung (Normale)
     vec3 smooth_normal = normalize(cross(p2 - p0, p1 - p0));
-    
-    // Die weiche Krümmung an Godots Beleuchtungssystem übergeben
     NORMAL = (inverse(MODEL_MATRIX) * vec4(smooth_normal, 0.0)).xyz;
 
-    // 3. LOD Fade anwenden
     float dist = distance(world_pos, CAMERA_POSITION_WORLD);
     float fade = 1.0 - smoothstep(fade_start, fade_end, dist);
     displacement *= fade;
-	
-	horizon_fade_var = smoothstep(fade_start, fade_end, dist);
 
+    horizon_fade_var = smoothstep(fade_start, fade_end, dist);
     wave_height_var = displacement.y;
 
     vec3 new_world_pos = world_pos + displacement;
@@ -94,17 +91,27 @@ void vertex() {
 }
 
 void fragment() {
-    
     float depth_mix = smoothstep(deep_level, 0.0, wave_height_var);
     vec3 albedo_color = mix(color_deep, color_shallow, depth_mix);
+        
+    // 1. Noise-Textur auslesen. Wir addieren TIME, damit der Schaum dynamisch "blubbert".
+    float f_noise = texture(foam_noise, world_xz_var * foam_noise_scale + (TIME * 0.05)).r;
     
-    float foam_mix = smoothstep(foam_level * 0.8, foam_level, wave_height_var);
+    // 2. Den Noise in eine Verzerrung umwandeln (von -0.5 bis +0.5)
+    float edge_distortion = (f_noise - 0.5) * foam_distortion;
+    
+    // 3. Den Schwellenwert (foam_level) mit der Verzerrung manipulieren
+    float foam_limit = foam_level + edge_distortion;
+    
+    // 4. Die scharfe, aber nun gezackte Kante zeichnen
+    float foam_mix = smoothstep(foam_limit - 0.02, foam_limit, wave_height_var);
+    
     albedo_color = mix(albedo_color, color_foam, foam_mix);
     
-	albedo_color = mix(albedo_color, horizon_color, horizon_fade_var);
-	
+    // Horizont
+    albedo_color = mix(albedo_color, horizon_color, horizon_fade_var);
+    
     ALBEDO = albedo_color;
-    // ROUGHNESS leicht erhöht (0.1), damit das weiche Wasser nicht wie eine Plastikfolie aussieht
     ROUGHNESS = 0.1; 
     SPECULAR = 0.5;
 }
