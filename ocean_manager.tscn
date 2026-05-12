@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cvaw6kwh8c8f7"]
 
 [ext_resource type="Script" uid="uid://c7f4p4jsnn4e0" path="res://ocean_manager.gd" id="1_tbrip"]
-[ext_resource type="Material" uid="uid://b2mi1ltn2s2cr" path="res://ocean_material.tres" id="2_2rlpo"]
+[ext_resource type="Material" uid="uid://b2mi1ltn2s2cr" path="res://water_material.tres" id="2_2rlpo"]
 [ext_resource type="PlaneMesh" uid="uid://cstnfck2c6cgh" path="res://water_high.tres" id="3_mm3f0"]
 [ext_resource type="PlaneMesh" uid="uid://bdhnlx7isnk4k" path="res://water_med.tres" id="4_k3vt1"]
 [ext_resource type="PlaneMesh" uid="uid://bmy2lj2age0ka" path="res://water_low.tres" id="5_khhrd"]

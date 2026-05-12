@@ -1,29 +1,27 @@
 shader_type spatial;
 
-// 1. Die drei Farben für unser Wasser
-uniform vec3 color_deep : source_color = vec3(0.05, 0.15, 0.3);   // Dunkles Tiefblau (Wellentäler)
-uniform vec3 color_shallow : source_color = vec3(0.1, 0.4, 0.6);  // Normales Ozeanblau (Mitte)
-uniform vec3 color_foam : source_color = vec3(0.9, 0.9, 0.95);    // Weiß/Schaum (Wellenspitzen)
+uniform vec3 color_deep : source_color = vec3(0.05, 0.15, 0.3);
+uniform vec3 color_shallow : source_color = vec3(0.1, 0.4, 0.6);
+uniform vec3 color_foam : source_color = vec3(0.9, 0.9, 0.95);
 
-// 2. Schwellenwerte: Wo beginnen Tiefblau und Schaum? (Im Inspektor anpassbar)
-uniform float foam_level = 0.5;  // Ab welcher Höhe (Y) der Schaum beginnt
-uniform float deep_level = -0.2; // Ab welcher Tiefe (Y) das Wasser dunkel wird
-
-uniform float time_scale = 0.5;
+uniform float foam_level = 0.08;
+uniform float deep_level = -0.05;
+uniform float time_scale = 0.1;
 
 uniform vec4 wave_a = vec4(0.5, 0.0, 0.1, 5.0);
 uniform vec4 wave_b = vec4(0.4, 0.3, 0.075, 3.0);
 uniform vec4 wave_c = vec4(-0.1, 0.15, 0.05, 2.0);
 
-
 uniform float fade_start = 30.0;
 uniform float fade_end = 80.0;
 
-// 3. VARYING: Diese Variable reicht die Höhe vom Vertex- zum Fragment-Shader durch
+uniform sampler2D wave_noise;
+uniform float noise_scale = 0.02;
+
 varying float wave_height_var;
 
-vec3 gerstner_wave(vec4 wave, vec3 p, float time) {
-    float steepness = wave.z;
+vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier) {
+    float steepness = wave.z * multiplier;
     float wavelength = wave.w;
     
     float k = 2.0 * PI / wavelength;
@@ -40,46 +38,68 @@ vec3 gerstner_wave(vec4 wave, vec3 p, float time) {
     );
 }
 
+// --- NEU: Hilfsfunktion, um den Code aufgeräumt zu halten ---
+vec3 get_wave_displacement(vec3 p, float time, float multiplier) {
+    vec3 d = vec3(0.0);
+    d += gerstner_wave(wave_a, p, time, multiplier);
+    d += gerstner_wave(wave_b, p, time, multiplier);
+    d += gerstner_wave(wave_c, p, time, multiplier);
+    return d;
+}
+
 void vertex() {
     vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
     
-    vec3 displacement = vec3(0.0);
-    displacement += gerstner_wave(wave_a, world_pos, TIME);
-    displacement += gerstner_wave(wave_b, world_pos, TIME);
-    displacement += gerstner_wave(wave_c, world_pos, TIME);
-	
-	float dist = distance(world_pos, CAMERA_POSITION_WORLD);
-	float fade = 1.0 - smoothstep(fade_start, fade_end, dist);
-	displacement *= fade;
+    vec2 noise_uv = world_pos.xz * noise_scale + (TIME * 0.01);
+    float noise_val = texture(wave_noise, noise_uv).r; 
+    float height_multiplier = mix(0.3, 1.5, noise_val);
+    
+    // 1. Die Wellen-Verschiebung am aktuellen Punkt
+    vec3 displacement = get_wave_displacement(world_pos, TIME, height_multiplier);
 
-    // Wir speichern nur die Y-Verschiebung (die Auslenkung nach oben/unten) für die Farbe
+    // --- NEU: BERECHNUNG DER WEICHEN OBERFLÄCHE ---
+    // 2. Wir tasten das Wasser 10cm weiter auf der X- und Z-Achse ab
+    float e = 0.1; 
+    vec3 px = world_pos + vec3(e, 0.0, 0.0);
+    vec3 pz = world_pos + vec3(0.0, 0.0, e);
+
+    vec3 displacement_x = get_wave_displacement(px, TIME, height_multiplier);
+    vec3 displacement_z = get_wave_displacement(pz, TIME, height_multiplier);
+
+    // Die echten 3D-Positionen der drei Punkte
+    vec3 p0 = world_pos + displacement;
+    vec3 p1 = px + displacement_x;
+    vec3 p2 = pz + displacement_z;
+
+    // Das Kreuzprodukt der benachbarten Punkte ergibt die perfekte, weiche Krümmung (Normale)
+    vec3 smooth_normal = normalize(cross(p2 - p0, p1 - p0));
+    
+    // Die weiche Krümmung an Godots Beleuchtungssystem übergeben
+    NORMAL = (inverse(MODEL_MATRIX) * vec4(smooth_normal, 0.0)).xyz;
+
+    // 3. LOD Fade anwenden
+    float dist = distance(world_pos, CAMERA_POSITION_WORLD);
+    float fade = 1.0 - smoothstep(fade_start, fade_end, dist);
+    displacement *= fade;
+
     wave_height_var = displacement.y;
 
-    // Der Fix gegen die "stacheligen" Polygone aus der vorherigen Antwort
     vec3 new_world_pos = world_pos + displacement;
     VERTEX = (inverse(MODEL_MATRIX) * vec4(new_world_pos, 1.0)).xyz;
 }
 
 void fragment() {
-    // Der Low-Poly Trick
-    vec3 normal = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
-    NORMAL = normal;
+    // DER LOW-POLY TRICK WURDE HIER KOMPLETT GELÖSCHT!
+    // Godot übernimmt jetzt automatisch unsere weichen Kurven aus dem Vertex-Shader.
     
-    // --- FARBMISCHUNG ---
-    // smoothstep(min, max, wert) liefert einen weichen Übergang zwischen 0.0 und 1.0
-    
-    // 1. Mische zwischen Tiefblau und Normalblau
-    // Wenn das Wasser tief ist (deep_level), ist der Wert 0. Bei Höhe 0.0 ist der Wert 1.
     float depth_mix = smoothstep(deep_level, 0.0, wave_height_var);
     vec3 albedo_color = mix(color_deep, color_shallow, depth_mix);
     
-    // 2. Mische den Schaum auf die Spitzen
-    // Der Schaum beginnt etwas unterhalb des foam_levels (* 0.8) und ist bei foam_level deckend
     float foam_mix = smoothstep(foam_level * 0.8, foam_level, wave_height_var);
     albedo_color = mix(albedo_color, color_foam, foam_mix);
     
-    // Weise die finale Farbe zu
     ALBEDO = albedo_color;
-    ROUGHNESS = 0.0;
+    // ROUGHNESS leicht erhöht (0.1), damit das weiche Wasser nicht wie eine Plastikfolie aussieht
+    ROUGHNESS = 0.1; 
     SPECULAR = 0.5;
 }
