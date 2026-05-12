@@ -4,6 +4,8 @@ uniform vec3 color_deep : source_color = vec3(0.05, 0.15, 0.3);
 uniform vec3 color_shallow : source_color = vec3(0.1, 0.4, 0.6);
 uniform vec3 color_foam : source_color = vec3(0.9, 0.9, 0.95);
 
+uniform vec3 horizon_color : source_color = vec3(0.5, 0.6, 0.7);
+
 uniform float foam_level = 0.08;
 uniform float deep_level = -0.05;
 uniform float time_scale = 0.1;
@@ -19,6 +21,7 @@ uniform sampler2D wave_noise;
 uniform float noise_scale = 0.02;
 
 varying float wave_height_var;
+varying float horizon_fade_var;
 
 vec3 gerstner_wave(vec4 wave, vec3 p, float time, float multiplier) {
     float steepness = wave.z * multiplier;
@@ -81,6 +84,8 @@ void vertex() {
     float dist = distance(world_pos, CAMERA_POSITION_WORLD);
     float fade = 1.0 - smoothstep(fade_start, fade_end, dist);
     displacement *= fade;
+	
+	horizon_fade_var = smoothstep(fade_start, fade_end, dist);
 
     wave_height_var = displacement.y;
 
@@ -89,8 +94,6 @@ void vertex() {
 }
 
 void fragment() {
-    // DER LOW-POLY TRICK WURDE HIER KOMPLETT GELÖSCHT!
-    // Godot übernimmt jetzt automatisch unsere weichen Kurven aus dem Vertex-Shader.
     
     float depth_mix = smoothstep(deep_level, 0.0, wave_height_var);
     vec3 albedo_color = mix(color_deep, color_shallow, depth_mix);
@@ -98,6 +101,8 @@ void fragment() {
     float foam_mix = smoothstep(foam_level * 0.8, foam_level, wave_height_var);
     albedo_color = mix(albedo_color, color_foam, foam_mix);
     
+	albedo_color = mix(albedo_color, horizon_color, horizon_fade_var);
+	
     ALBEDO = albedo_color;
     // ROUGHNESS leicht erhöht (0.1), damit das weiche Wasser nicht wie eine Plastikfolie aussieht
     ROUGHNESS = 0.1; 

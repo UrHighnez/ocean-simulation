@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://cvaw6kwh8c8f7" path="res://ocean_manager.tscn" id="1_f3sb7"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_f3sb7"]
+ground_horizon_color = Color(0.5019608, 0.6, 0.7019608, 1)
 
 [sub_resource type="Sky" id="Sky_fj7yv"]
 sky_material = SubResource("ProceduralSkyMaterial_f3sb7")
@@ -11,8 +12,9 @@ sky_material = SubResource("ProceduralSkyMaterial_f3sb7")
 background_mode = 2
 sky = SubResource("Sky_fj7yv")
 fog_enabled = true
-fog_density = 0.005
-fog_aerial_perspective = 0.75
+fog_light_color = Color(0.5019608, 0.6, 0.7019608, 1)
+fog_density = 0.002
+fog_aerial_perspective = 1.0
 
 [node name="World" type="Node3D" unique_id=1617718502]
 
