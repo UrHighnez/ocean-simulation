@@ -5,7 +5,7 @@ extends Node3D
 
 @export var camera: Camera3D
 @export var chunk_size: float = 50.0
-@export var grid_radius: int = 4 # Ergibt ein 9x9 Gitter (4 in jede Richtung + Mitte)
+@export var grid_radius: int = 7
 
 # Lade deine vorbereiteten Meshes
 @export var mesh_high: PlaneMesh
