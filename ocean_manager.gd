@@ -33,7 +33,7 @@ func _create_chunk(grid_pos: Vector2):
 	chunk.material_override = water_material
 	chunks[grid_pos] = chunk
 
-func _process(delta):
+func _process(_delta):
 	if not camera: return
 	
 	# Finde heraus, in welchem Chunk (Grid-Koordinate) sich die Kamera aktuell befindet

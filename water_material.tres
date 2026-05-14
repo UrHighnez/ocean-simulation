@@ -4,7 +4,6 @@
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_pmio7"]
 noise_type = 2
-frequency = 0.05
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_mcwpg"]
 noise = SubResource("FastNoiseLite_pmio7")
@@ -19,20 +18,26 @@ seamless = true
 [resource]
 render_priority = 0
 shader = ExtResource("1_pmio7")
-shader_parameter/color_deep = Color(0.070236586, 0.2600043, 0.3396959, 1)
-shader_parameter/color_shallow = Color(0.14765078, 0.44243854, 0.5150507, 1)
+shader_parameter/color_deep = Color(0.07, 0.25, 0.34, 1)
+shader_parameter/color_mid = Color(0.14, 0.44, 0.51, 1)
+shader_parameter/color_crest = Color(0.19, 0.72, 0.67, 1)
 shader_parameter/color_foam = Color(0.9, 0.9, 0.95, 1)
 shader_parameter/horizon_color = Color(0.5, 0.6, 0.7, 1)
-shader_parameter/foam_level = 0.13
-shader_parameter/deep_level = -0.125
+shader_parameter/deep_level = -0.5
+shader_parameter/depth_blend_range = 1.0
+shader_parameter/crest_blend_offset = 0.5
+shader_parameter/wave_a = Vector4(5.1, 0.3, 0.3, 11.7)
+shader_parameter/wave_b = Vector4(0.43, 0.31, 0.15, 3.1)
+shader_parameter/wave_c = Vector4(-0.12, 0.13, 0.054, 2.3)
 shader_parameter/time_scale = 0.5
-shader_parameter/wave_a = Vector4(0.5, 0, 0.1, 5)
-shader_parameter/wave_b = Vector4(0.4, 0.3, 0.075, 3)
-shader_parameter/wave_c = Vector4(-0.1, 0.15, 0.05, 2)
 shader_parameter/fade_start = 30.0
 shader_parameter/fade_end = 80.0
 shader_parameter/wave_noise = SubResource("NoiseTexture2D_6lqol")
 shader_parameter/noise_scale = 0.02
 shader_parameter/foam_noise = SubResource("NoiseTexture2D_mcwpg")
-shader_parameter/foam_noise_scale = 0.2
-shader_parameter/foam_distortion = 0.1
+shader_parameter/foam_noise_scale = 0.3
+shader_parameter/foam_level = 0.15
+shader_parameter/foam_edge_softness = 0.1
+shader_parameter/foam_sparseness = 3.0
+shader_parameter/foam_max_render_distance = 60.0
+shader_parameter/foam_proximity_fade_margin = 15.0
