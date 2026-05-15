@@ -1,15 +1,23 @@
-# Advanced Gerstner Ocean Simulation
+# 🌊 Advanced Gerstner Ocean Simulation
 
-A high-performance, physics-driven 3D ocean simulation implemented in Godot 4. This project utilizes multi-iteration Gerstner wave algorithms for vertex displacement, an optimized two-pass treadmill chunk manager with distance-based Level of Detail (LOD) mesh swapping, and a custom advanced fragment shader featuring sub-surface scattering, dual-layer normal mapping and parameter-blended foam logic.
+A high-performance, physics-driven 3D ocean simulation implemented in Godot 4. This project utilizes multi-iteration Gerstner wave algorithms for vertex displacement with dynamic runtime control over storm intensity and wind direction, an optimized two-pass treadmill chunk manager with distance-based Level of Detail (LOD) mesh swapping, and a custom advanced fragment shader featuring sub-surface scattering, dual-layer normal mapping, and parameter-blended foam logic.
 
-<img width="800" height="450" alt="Wave-Gif" src="https://github.com/user-attachments/assets/c702d674-3d55-470e-81cf-144ec2c52fa4" />
+<p align="center">
+  <img width="800" height="450" alt="Wave-Gif" src="https://github.com/user-attachments/assets/c702d674-3d55-470e-81cf-144ec2c52fa4" />
+</p>
 
 ## 🛠️ Technical Specifications
 
 ### 1. Vertex Displacement & Dynamic Flattening
 - **Gerstner Wave Functionality:** Real-time surface displacement is achieved through a multi-iteration loop calculating directional sine wave transformations. It dynamically computes continuous tangents and binormals per vertex to derive precise surface normals.
 
-- **Horizon-Distance Flattening:** To eliminate visible mesh boundaries at extreme distances, the vertex shader evaluates distance vectors against camera matrices using a localized `smoothstep` distribution: $$\text{displacement} \times= (1.0 - \text{smoothstep}(\text{fade\_start}, \text{fade\_end}, \text{dist}))$$This flattens the simulation into a calm horizontal plane before the geometric grid perimeter is reached.
+- **Horizon-Distance Flattening:** To eliminate visible mesh boundaries at extreme distances, the vertex shader evaluates distance vectors against camera matrices using a localized `smoothstep` distribution:
+
+    $$
+    \text{displacement} \times= (1.0 - \text{smoothstep}(\text{fade start}, \text{fade end}, \text{dist}))
+    $$
+
+    This flattens the simulation into a calm horizontal plane before the geometric grid perimeter is reached.
 
 ### 2. Optimized Chunk & LOD Management (OceanManager.gd)
 The simulation employs a Node3D tool-script controller that maintains a localized $N \times N$ chunk grid centered on the active camera.
