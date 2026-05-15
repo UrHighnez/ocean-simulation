@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cfcu1gv3e1ne"
-path.s3tc="res://.godot/imported/940-normal.jpg-b60449871ff8c57c5ceafa60e76d2b39.s3tc.ctex"
+uid="uid://txmr8njba614"
+path.s3tc="res://.godot/imported/940-normal.png-37a3d7a1e8946111371b462ff44ffac7.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://940-normal.jpg"
-dest_files=["res://.godot/imported/940-normal.jpg-b60449871ff8c57c5ceafa60e76d2b39.s3tc.ctex"]
+source_file="res://940-normal.png"
+dest_files=["res://.godot/imported/940-normal.png-37a3d7a1e8946111371b462ff44ffac7.s3tc.ctex"]
 
 [params]
 

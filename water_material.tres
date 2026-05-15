@@ -1,7 +1,7 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://b2mi1ltn2s2cr"]
 
 [ext_resource type="Shader" uid="uid://vwayivcyyfi" path="res://ocean.gdshader" id="1_pmio7"]
-[ext_resource type="Texture2D" uid="uid://cfcu1gv3e1ne" path="res://940-normal.jpg" id="2_mcwpg"]
+[ext_resource type="Texture2D" uid="uid://txmr8njba614" path="res://940-normal.png" id="2_mcwpg"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_pmio7"]
 noise_type = 2
