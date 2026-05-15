@@ -154,17 +154,21 @@ void fragment() {
         vec2 wind_dir_vec = rotate_dir(vec2(1.0, 0.0), wind_direction_degrees);
         float storm_foam_speed = mix(1.0, 2.5, storm_intensity);
         
-        vec2 crest_uv_offset = wind_dir_vec * TIME * 0.04 * storm_foam_speed;
-        vec2 valley_uv_offset = wind_dir_vec * TIME * 0.005 * storm_foam_speed; 
+        // 1. Unified World Translation
+        // Translating the coordinates *before* applying individual scales physically locks 
+        // the two noise fields to the exact same world velocity.
+        vec2 world_pan_offset = wind_dir_vec * TIME * 0.8 * storm_foam_speed;
+        vec2 panned_world_xz = world_xz_var + world_pan_offset;
 
         // Texture Fetch 1: Crest Foam Base
-        vec2 crest_noise_uv = world_xz_var * foam_noise_scale + crest_uv_offset;
+        vec2 crest_noise_uv = panned_world_xz * foam_noise_scale;
         float raw_crest_noise = texture(foam_noise, crest_noise_uv).r;
         float combined_crest_noise = raw_crest_noise * raw_crest_noise; 
 
         // Texture Fetch 2: Valley Foam Base
-        vec2 valley_uncorrelated_xz = vec2(world_xz_var.y + 173.1, world_xz_var.x - 231.7);
-        vec2 valley_noise_uv = valley_uncorrelated_xz * valley_foam_scale + valley_uv_offset;
+        // Correlation broken using a large scalar offset rather than swapping axes.
+        // This preserves the exact wind direction alignment across both layers.
+        vec2 valley_noise_uv = (panned_world_xz + vec2(173.1, -231.7)) * valley_foam_scale;
         
         vec2 fluid_warp = vec2(
             sin(world_xz_var.y * 0.15 + TIME * 0.8),
@@ -175,13 +179,12 @@ void fragment() {
         float raw_valley_noise = texture(foam_noise, valley_noise_uv).r;
         float combined_valley_noise = raw_valley_noise * raw_valley_noise;
         
-        // Topological Fusion
+        // Topological Fusion: Now mathematically stable because the layers do not slide relative to each other.
         float unified_noise = max(combined_crest_noise, combined_valley_noise);
         
         float normalized_height = clamp(wave_height_var / max(0.1, local_max_height_var), 0.0, 1.0);
         
         // --- STORM MODULATION ---
-        // Creates a rapid taper for all foam properties in the bottom 20% of the slider.
         float storm_fade = smoothstep(0.0, 0.2, storm_intensity);
         
         // Dynamic Continuous Threshold
@@ -201,8 +204,6 @@ void fragment() {
         
         // Sharp Break Edge Logic
         float peak_mask = smoothstep(0.85, 0.95, normalized_height);
-        
-        // The sharp edge threshold scales to 1.0 (invisible) when the storm subsides.
         float sharp_threshold = mix(1.0, 0.3, storm_fade);
         float sharp_edge = peak_mask * smoothstep(sharp_threshold, sharp_threshold + foam_edge_softness, unified_noise);
         
