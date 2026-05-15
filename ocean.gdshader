@@ -32,10 +32,10 @@ uniform float noise_scale = 0.02;
 group_uniforms Foam;
 uniform sampler2D foam_noise : hint_default_white;
 uniform float foam_level : hint_range(0.0, 1.0) = 0.5;
-uniform float foam_noise_scale = 0.1;
+uniform float foam_noise_scale = 0.2;
 uniform float foam_edge_softness : hint_range(0.001, 0.5) = 0.05; 
 uniform float valley_foam_scale = 0.05; 
-uniform float valley_foam_amount : hint_range(0.0, 1.0) = 0.5; 
+uniform float valley_foam_amount : hint_range(0.0, 1.0) = 0.3; 
 
 group_uniforms Performance;
 uniform float foam_max_render_distance = 60.0;
@@ -155,17 +155,15 @@ void fragment() {
         float storm_foam_speed = mix(1.0, 2.5, storm_intensity);
         vec2 base_uv_offset = wind_dir_vec * TIME * 0.04 * storm_foam_speed;
 
-        // Texture Fetch 1: Crest Foam
+        // Texture Fetch 1: Crest Foam Base
         vec2 crest_noise_uv = world_xz_var * foam_noise_scale + base_uv_offset;
         float raw_crest_noise = texture(foam_noise, crest_noise_uv).r;
         float combined_crest_noise = raw_crest_noise * raw_crest_noise; 
 
-        // Uncorrelated UV base mapping
+        // Texture Fetch 2: Valley Foam Base
         vec2 valley_uncorrelated_xz = vec2(world_xz_var.y + 173.1, world_xz_var.x - 231.7);
         vec2 valley_noise_uv = valley_uncorrelated_xz * valley_foam_scale + (base_uv_offset * 0.8);
         
-        // Procedural Fluid Warp: Replaces the crest-noise warp to eliminate intersection artifacts.
-        // Uses orthogonal sine/cosine waves scaled by world space to create a swirling distortion.
         vec2 fluid_warp = vec2(
             sin(world_xz_var.y * 0.15 + TIME * 1.2),
             cos(world_xz_var.x * 0.15 + TIME * 1.2)
@@ -175,27 +173,30 @@ void fragment() {
         float raw_valley_noise = texture(foam_noise, valley_noise_uv).r;
         float combined_valley_noise = raw_valley_noise * raw_valley_noise;
         
+        // --- THE ARCHITECTURAL FIX: TOPOLOGICAL FUSION ---
+        // By taking the mathematical max of the two fields prior to thresholding, 
+        // the separate layers are structurally fused into a single unified topology.
+        float unified_noise = max(combined_crest_noise, combined_valley_noise);
+        
         float normalized_height = clamp(wave_height_var / max(0.1, local_max_height_var), 0.0, 1.0);
         
-        // Crest Foam Logic
+        // Dynamic Continuous Threshold
+        // Smoothly interpolating a single threshold eliminates the fade-out gap entirely.
         float crest_threshold = max(0.0, 1.0 - foam_level - (storm_intensity * 0.4));
-        float crest_mask = smoothstep(0.4, 0.8, normalized_height);
-        float crest_foam = crest_mask * smoothstep(crest_threshold, crest_threshold + foam_edge_softness, combined_crest_noise);
-        
-        // Valley Foam Logic
-        float valley_mask = 1.0 - smoothstep(0.2, 0.6, normalized_height);
         float valley_threshold = mix(0.95, 0.5, valley_foam_amount) - (storm_intensity * 0.1); 
-        float valley_foam = valley_mask * smoothstep(valley_threshold, valley_threshold + foam_edge_softness, combined_valley_noise);
+        float dynamic_threshold = mix(valley_threshold, crest_threshold, smoothstep(0.2, 0.8, normalized_height));
         
-        // Additive Blend
-        float base_foam = clamp(crest_foam + valley_foam, 0.0, 1.0);
+        // Render the unified base foam
+        float base_foam = smoothstep(dynamic_threshold, dynamic_threshold + foam_edge_softness, unified_noise);
         
-        float opacity_fade = mix(0.35, 1.0, normalized_height);
+        float opacity_fade = mix(0.65, 1.0, normalized_height);
         base_foam *= opacity_fade;
         
         // Sharp Break Edge Logic
+        // By applying the sharp edge mask to the SAME unified noise field, it perfectly 
+        // outlines the base foam without overlapping anomalies.
         float peak_mask = smoothstep(0.85, 0.95, normalized_height);
-        float sharp_edge = peak_mask * smoothstep(0.3, 0.3 + foam_edge_softness, combined_crest_noise);
+        float sharp_edge = peak_mask * smoothstep(0.3, 0.3 + foam_edge_softness, unified_noise);
         
         foam_mix = clamp(base_foam + sharp_edge, 0.0, 1.0);
         foam_mix *= proximity_fade;
