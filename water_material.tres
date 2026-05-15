@@ -1,6 +1,7 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://b2mi1ltn2s2cr"]
 
 [ext_resource type="Shader" uid="uid://vwayivcyyfi" path="res://ocean.gdshader" id="1_pmio7"]
+[ext_resource type="Texture2D" uid="uid://cfcu1gv3e1ne" path="res://940-normal.jpg" id="2_mcwpg"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_pmio7"]
 noise_type = 2
@@ -44,3 +45,9 @@ shader_parameter/valley_foam_scale = 0.1
 shader_parameter/valley_foam_amount = 0.5
 shader_parameter/foam_max_render_distance = 60.0
 shader_parameter/foam_proximity_fade_margin = 15.0
+shader_parameter/wave_normal_map = ExtResource("2_mcwpg")
+shader_parameter/normal_scale = 0.1
+shader_parameter/normal_pan_speed = Vector2(0.05, 0.03)
+shader_parameter/normal_uv_scale = 0.1
+shader_parameter/sss_intensity = 0.10000000475
+shader_parameter/fresnel_power = 5.0
