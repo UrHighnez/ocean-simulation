@@ -149,23 +149,26 @@ void vertex() {
 
 // --- FRAGMENT SHADER ---
 void fragment() {
+    // --- GLOBAL STORM MODULATION ---
+    // Extracted to top-level to dynamically flatten geometry and disable foam simultaneously.
+    float storm_fade = smoothstep(0.0, 0.2, storm_intensity);
+
     // 1. DUAL-LAYER NORMAL MAPPING (MICRO-GEOMETRY)
     vec2 wind_dir_vec = rotate_dir(vec2(1.0, 0.0), wind_direction_degrees);
+    float ripple_speed = mix(0.5, 2.5, storm_intensity);
     
-    vec2 normal_uv1 = world_xz_var * normal_uv_scale + wind_dir_vec * TIME * normal_pan_speed.x;
-    // Offset scale and reverse/skew direction for the secondary layer to create chaotic intersections
-    vec2 normal_uv2 = world_xz_var * (normal_uv_scale * 1.3) - vec2(wind_dir_vec.y, wind_dir_vec.x) * TIME * normal_pan_speed.y;
+    vec2 normal_uv1 = world_xz_var * normal_uv_scale + wind_dir_vec * TIME * normal_pan_speed.x * ripple_speed;
+    vec2 normal_uv2 = world_xz_var * (normal_uv_scale * 1.3) - vec2(wind_dir_vec.y, wind_dir_vec.x) * TIME * normal_pan_speed.y * ripple_speed;
     
     vec3 n1 = texture(wave_normal_map, normal_uv1).rgb;
     vec3 n2 = texture(wave_normal_map, normal_uv2).rgb;
     
-    // Unpack, sum, and repack the normals (Simplified UDN Blending)
     vec3 t1 = n1 * 2.0 - 1.0;
     vec3 t2 = n2 * 2.0 - 1.0;
     vec3 combined_normal = normalize(vec3(t1.xy + t2.xy, t1.z));
     
     NORMAL_MAP = combined_normal * 0.5 + 0.5;
-    NORMAL_MAP_DEPTH = normal_scale;
+    NORMAL_MAP_DEPTH = normal_scale * storm_fade;
 
     // 2. HEIGHT & BASE COLOR CALCULATION
     float normalized_height = clamp(wave_height_var / max(0.1, local_max_height_var), 0.0, 1.0);
@@ -178,54 +181,56 @@ void fragment() {
     albedo_color = mix(albedo_color, color_crest, mix_high);
 
     // 3. FRESNEL REFLECTANCE
-    // Calculates the angle between the camera view and the surface normal.
-    // Grazing angles return 1.0, facing angles return 0.0.
     float fresnel = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), fresnel_power);
-    
-    // Mix the deep water color with the horizon color based on the Fresnel term.
-    // This physically grounds the water into the environment skybox.
     albedo_color = mix(albedo_color, horizon_color, fresnel * 0.8);
 
     // 4. SUBSURFACE SCATTERING (SSS) APPROXIMATION
-    // Light penetrates the peaks of the waves. We fake this volumetric transmittance 
-    // by mapping the crest color into the EMISSION channel based on wave height.
     float sss_mask = smoothstep(0.4, 1.0, normalized_height);
     vec3 sss_emission = color_crest * sss_mask * sss_intensity;
 
-    // 5. FOAM CALCULATION (Unchanged logic, seamlessly applied over the new geometry)
+    // 5. FOAM CALCULATION
     float foam_mix = 0.0;
 
     if (vertex_dist_var < foam_max_render_distance) {
         float proximity_fade = 1.0 - smoothstep(foam_max_render_distance - foam_proximity_fade_margin, foam_max_render_distance, vertex_dist_var);
         float storm_foam_speed = mix(1.0, 2.5, storm_intensity);
         
-        vec2 world_pan_offset = wind_dir_vec * TIME * 0.8 * storm_foam_speed;
-        vec2 panned_world_xz = world_xz_var + world_pan_offset;
+        vec2 crest_uv_offset = wind_dir_vec * TIME * 0.04 * storm_foam_speed;
+        vec2 valley_uv_offset = wind_dir_vec * TIME * 0.005 * storm_foam_speed; 
 
-        vec2 crest_noise_uv = panned_world_xz * foam_noise_scale;
-        float combined_crest_noise = pow(texture(foam_noise, crest_noise_uv).r, 2.0); 
+        vec2 crest_noise_uv = world_xz_var * foam_noise_scale + crest_uv_offset;
+        float raw_crest_noise = texture(foam_noise, crest_noise_uv).r;
+        float combined_crest_noise = raw_crest_noise * raw_crest_noise; 
 
-        vec2 valley_noise_uv = (panned_world_xz + vec2(173.1, -231.7)) * valley_foam_scale;
-        vec2 fluid_warp = vec2(sin(world_xz_var.y * 0.15 + TIME * 0.8), cos(world_xz_var.x * 0.15 + TIME * 0.8)) * 0.04;
+        vec2 valley_uncorrelated_xz = vec2(world_xz_var.y + 173.1, world_xz_var.x - 231.7);
+        vec2 valley_noise_uv = valley_uncorrelated_xz * valley_foam_scale + valley_uv_offset;
+        
+        vec2 fluid_warp = vec2(
+            sin(world_xz_var.y * 0.15 + TIME * 0.8),
+            cos(world_xz_var.x * 0.15 + TIME * 0.8)
+        ) * 0.04;
         valley_noise_uv += fluid_warp;
         
-        float combined_valley_noise = pow(texture(foam_noise, valley_noise_uv).r, 2.0);
+        float raw_valley_noise = texture(foam_noise, valley_noise_uv).r;
+        float combined_valley_noise = raw_valley_noise * raw_valley_noise;
         
         float unified_noise = max(combined_crest_noise, combined_valley_noise);
         
-        float storm_fade = smoothstep(0.0, 0.2, storm_intensity);
-        
         float dynamic_crest_level = foam_level * storm_fade;
         float crest_threshold = max(0.0, 1.0 - dynamic_crest_level - (storm_intensity * 0.4));
+        
         float dynamic_valley_amount = valley_foam_amount * storm_fade;
         float valley_threshold = mix(1.0, 0.5, dynamic_valley_amount); 
         
         float dynamic_threshold = mix(valley_threshold, crest_threshold, smoothstep(0.2, 0.8, normalized_height));
         
         float base_foam = smoothstep(dynamic_threshold, dynamic_threshold + foam_edge_softness, unified_noise);
-        base_foam *= mix(0.65, 1.0, normalized_height);
+        
+        float opacity_fade = mix(0.65, 1.0, normalized_height);
+        base_foam *= opacity_fade;
         
         float peak_mask = smoothstep(0.85, 0.95, normalized_height);
+        
         float sharp_threshold = mix(1.0, 0.3, storm_fade);
         float sharp_edge = peak_mask * smoothstep(sharp_threshold, sharp_threshold + foam_edge_softness, unified_noise);
         
@@ -236,7 +241,7 @@ void fragment() {
     albedo_color = mix(albedo_color, color_foam, foam_mix);
     
     ALBEDO = albedo_color;
-    EMISSION = sss_emission * (1.0 - foam_mix); // Disable SSS where dense foam blocks light
-    ROUGHNESS = mix(0.02, 0.15, foam_mix); // Foam increases surface roughness
+    EMISSION = sss_emission * (1.0 - foam_mix);
+    ROUGHNESS = mix(0.02, 0.15, foam_mix);
     SPECULAR = 0.5;
 }
