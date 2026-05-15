@@ -1,0 +1,2 @@
+Advanced Gerstner Ocean Simulation
+A high-performance, physics-driven 3D ocean simulation implemented in Godot 4. This project utilizes multi-iteration Gerstner wave algorithms for vertex displacement, an optimized two-pass treadmill chunk manager with distance-based Level of Detail (LOD) mesh swapping, and a custom advanced fragment shader featuring sub-surface scattering, dual-layer normal mapping, and artifact-free, parameter-blended foam logic.
