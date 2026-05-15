@@ -31,6 +31,11 @@ func _create_chunk(grid_pos: Vector2):
 	var chunk = MeshInstance3D.new()
 	add_child(chunk)
 	chunk.material_override = water_material
+	chunk.global_position = Vector3(grid_pos.x * chunk_size, 0, grid_pos.y * chunk_size)
+	
+	# LOD Optimization: Default to the lowest polycount mesh for editor stability.
+	chunk.mesh = mesh_low 
+	
 	chunks[grid_pos] = chunk
 
 func _process(_delta):

@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://be1cmelatsxrk"]
 
-[ext_resource type="PackedScene" uid="uid://cvaw6kwh8c8f7" path="res://ocean_manager.tscn" id="1_f3sb7"]
+[ext_resource type="PackedScene" uid="uid://cvaw6kwh8c8f7" path="res://environment/ocean/ocean_manager.tscn" id="1_jhmie"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_f3sb7"]
 ground_bottom_color = Color(0.35686275, 0.42352942, 0.49019608, 1)
@@ -27,5 +27,5 @@ transform = Transform3D(-1, 3.9080586e-08, -1.4585073e-07, 0, 0.9659257, 0.25881
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=308637182]
 environment = SubResource("Environment_fj7yv")
 
-[node name="OceanManager" parent="." unique_id=1175576111 node_paths=PackedStringArray("camera") instance=ExtResource("1_f3sb7")]
+[node name="OceanManager" parent="." unique_id=1175576111 node_paths=PackedStringArray("camera") instance=ExtResource("1_jhmie")]
 camera = NodePath("../Camera3D")
