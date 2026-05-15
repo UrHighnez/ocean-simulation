@@ -24,8 +24,8 @@ uniform float global_steepness : hint_range(0.0, 1.5) = 0.8;
 uniform float time_scale = 0.7;
 
 group_uniforms Fading_Effects;
-uniform float fade_start = 30.0;
-uniform float fade_end = 80.0;   
+uniform float fade_start = 150.0;
+uniform float fade_end = 300.0;   
 uniform sampler2D wave_noise : hint_default_black;
 uniform float noise_scale = 0.02;
 

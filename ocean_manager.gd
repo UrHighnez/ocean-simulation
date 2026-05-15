@@ -36,18 +36,16 @@ func _create_chunk(grid_pos: Vector2):
 func _process(_delta):
 	if not camera: return
 	
-	# Finde heraus, in welchem Chunk (Grid-Koordinate) sich die Kamera aktuell befindet
 	var cam_grid_pos = Vector2(
 		round(camera.global_position.x / chunk_size),
 		round(camera.global_position.z / chunk_size)
 	)
 	
-	# Aktualisiere alle Chunks
+	# Temporärer Speicher für anstehende Dictionary-Änderungen
+	var pending_moves = {}
+	
+	# 1. TREADMILL-LOGIK: Evaluierungs-Pass (Nur Lesezugriff auf 'chunks')
 	for grid_pos in chunks.keys():
-		var chunk = chunks[grid_pos]
-		
-		# 1. TREADMILL-LOGIK: Snapping und Teleportation
-		# Wenn der Chunk zu weit von der Kamera entfernt ist, verschiebe ihn auf die andere Seite
 		var rel_x = grid_pos.x - cam_grid_pos.x
 		var rel_z = grid_pos.y - cam_grid_pos.y
 		
@@ -55,27 +53,43 @@ func _process(_delta):
 		var new_grid_z = grid_pos.y
 		var needs_move = false
 		
-		if rel_x > grid_radius: new_grid_x -= (grid_radius * 2 + 1); needs_move = true
-		if rel_x < -grid_radius: new_grid_x += (grid_radius * 2 + 1); needs_move = true
-		if rel_z > grid_radius: new_grid_z -= (grid_radius * 2 + 1); needs_move = true
-		if rel_z < -grid_radius: new_grid_z += (grid_radius * 2 + 1); needs_move = true
+		# Optimierung: Mutually exclusive conditions nutzen 'elif'
+		if rel_x > grid_radius: 
+			new_grid_x -= (grid_radius * 2 + 1)
+			needs_move = true
+		elif rel_x < -grid_radius: 
+			new_grid_x += (grid_radius * 2 + 1)
+			needs_move = true
+			
+		if rel_z > grid_radius: 
+			new_grid_z -= (grid_radius * 2 + 1)
+			needs_move = true
+		elif rel_z < -grid_radius: 
+			new_grid_z += (grid_radius * 2 + 1)
+			needs_move = true
 		
 		if needs_move:
-			# Chunk im Dictionary unter neuer Position speichern
-			var new_grid_pos = Vector2(new_grid_x, new_grid_z)
-			chunks[new_grid_pos] = chunk
-			chunks.erase(grid_pos)
-			grid_pos = new_grid_pos
+			pending_moves[grid_pos] = Vector2(new_grid_x, new_grid_z)
+	
+	# 2. DICTIONARY-MUTATION: Ausführungs-Pass
+	for old_pos in pending_moves:
+		var new_pos = pending_moves[old_pos]
+		var chunk = chunks[old_pos]
 		
-		# Setze die reale Weltposition des Chunks
-		chunk.global_position = Vector3(grid_pos.x * chunk_size, 0, grid_pos.y * chunk_size)
+		chunks[new_pos] = chunk
+		chunks.erase(old_pos)
 		
-		# 2. LOD-LOGIK: Mesh basierend auf Distanz tauschen
+		# Reale Weltposition des Chunks aktualisieren
+		chunk.global_position = Vector3(new_pos.x * chunk_size, 0, new_pos.y * chunk_size)
+	
+	# 3. LOD-LOGIK: Distanzprüfung (Nachdem alle Verschiebungen abgeschlossen sind)
+	for grid_pos in chunks:
+		var chunk = chunks[grid_pos]
 		var dist_to_cam = grid_pos.distance_to(cam_grid_pos)
 		
 		if dist_to_cam <= 1.5:
-			chunk.mesh = mesh_high
+			if chunk.mesh != mesh_high: chunk.mesh = mesh_high
 		elif dist_to_cam <= 3.5:
-			chunk.mesh = mesh_med
+			if chunk.mesh != mesh_med: chunk.mesh = mesh_med
 		else:
-			chunk.mesh = mesh_low
+			if chunk.mesh != mesh_low: chunk.mesh = mesh_low
