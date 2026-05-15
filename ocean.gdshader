@@ -35,7 +35,7 @@ uniform float foam_level : hint_range(0.0, 1.0) = 0.5;
 uniform float foam_noise_scale = 0.2;
 uniform float foam_edge_softness : hint_range(0.001, 0.5) = 0.05; 
 uniform float valley_foam_scale = 0.1; 
-uniform float valley_foam_amount : hint_range(0.0, 1.0) = 0.5; 
+uniform float valley_foam_amount : hint_range(0.0, 1.0) = 0.4; 
 
 group_uniforms Performance;
 uniform float foam_max_render_distance = 60.0;
@@ -149,11 +149,9 @@ void vertex() {
 
 // --- FRAGMENT SHADER ---
 void fragment() {
-    // --- GLOBAL STORM MODULATION ---
-    // Extracted to top-level to dynamically flatten geometry and disable foam simultaneously.
     float storm_fade = smoothstep(0.0, 0.2, storm_intensity);
 
-    // 1. DUAL-LAYER NORMAL MAPPING (MICRO-GEOMETRY)
+    // 1. DUAL-LAYER NORMAL MAPPING
     vec2 wind_dir_vec = rotate_dir(vec2(1.0, 0.0), wind_direction_degrees);
     float ripple_speed = mix(0.5, 2.5, storm_intensity);
     
@@ -168,7 +166,6 @@ void fragment() {
     vec3 combined_normal = normalize(vec3(t1.xy + t2.xy, t1.z));
     
     NORMAL_MAP = combined_normal * 0.5 + 0.5;
-    NORMAL_MAP_DEPTH = normal_scale * storm_fade;
 
     // 2. HEIGHT & BASE COLOR CALCULATION
     float normalized_height = clamp(wave_height_var / max(0.1, local_max_height_var), 0.0, 1.0);
@@ -195,15 +192,14 @@ void fragment() {
         float proximity_fade = 1.0 - smoothstep(foam_max_render_distance - foam_proximity_fade_margin, foam_max_render_distance, vertex_dist_var);
         float storm_foam_speed = mix(1.0, 2.5, storm_intensity);
         
-        vec2 crest_uv_offset = wind_dir_vec * TIME * 0.04 * storm_foam_speed;
-        vec2 valley_uv_offset = wind_dir_vec * TIME * 0.005 * storm_foam_speed; 
+        vec2 world_pan_offset = wind_dir_vec * TIME * 0.8 * storm_foam_speed;
+        vec2 panned_world_xz = world_xz_var + world_pan_offset;
 
-        vec2 crest_noise_uv = world_xz_var * foam_noise_scale + crest_uv_offset;
+        vec2 crest_noise_uv = panned_world_xz * foam_noise_scale;
         float raw_crest_noise = texture(foam_noise, crest_noise_uv).r;
         float combined_crest_noise = raw_crest_noise * raw_crest_noise; 
 
-        vec2 valley_uncorrelated_xz = vec2(world_xz_var.y + 173.1, world_xz_var.x - 231.7);
-        vec2 valley_noise_uv = valley_uncorrelated_xz * valley_foam_scale + valley_uv_offset;
+        vec2 valley_noise_uv = (panned_world_xz + vec2(173.1, -231.7)) * valley_foam_scale;
         
         vec2 fluid_warp = vec2(
             sin(world_xz_var.y * 0.15 + TIME * 0.8),
@@ -214,7 +210,8 @@ void fragment() {
         float raw_valley_noise = texture(foam_noise, valley_noise_uv).r;
         float combined_valley_noise = raw_valley_noise * raw_valley_noise;
         
-        float unified_noise = max(combined_crest_noise, combined_valley_noise);
+        // FIX 1: Screen blend replaces max(). This prevents sharp ridges and tangent discontinuities.
+        float unified_noise = combined_crest_noise + combined_valley_noise - (combined_crest_noise * combined_valley_noise);
         
         float dynamic_crest_level = foam_level * storm_fade;
         float crest_threshold = max(0.0, 1.0 - dynamic_crest_level - (storm_intensity * 0.4));
@@ -224,24 +221,37 @@ void fragment() {
         
         float dynamic_threshold = mix(valley_threshold, crest_threshold, smoothstep(0.2, 0.8, normalized_height));
         
-        float base_foam = smoothstep(dynamic_threshold, dynamic_threshold + foam_edge_softness, unified_noise);
-        
-        float opacity_fade = mix(0.65, 1.0, normalized_height);
-        base_foam *= opacity_fade;
-        
         float peak_mask = smoothstep(0.85, 0.95, normalized_height);
-        
         float sharp_threshold = mix(1.0, 0.3, storm_fade);
-        float sharp_edge = peak_mask * smoothstep(sharp_threshold, sharp_threshold + foam_edge_softness, unified_noise);
         
-        foam_mix = clamp(base_foam + sharp_edge, 0.0, 1.0);
-        foam_mix *= proximity_fade;
+        // FIX 2: Parameter Blending. Modulate the threshold and softness dynamically 
+        // based on the peak_mask, rather than layering two separate smoothsteps.
+        float final_threshold = mix(dynamic_threshold, sharp_threshold, peak_mask);
+        float final_softness = mix(foam_edge_softness, foam_edge_softness * 0.25, peak_mask);
+        
+        // Single, clean smoothstep evaluation.
+        float raw_foam = smoothstep(final_threshold, final_threshold + final_softness, unified_noise);
+        
+        // Resolve final opacity levels
+        float base_opacity = mix(0.65, 1.0, normalized_height);
+        float final_opacity = mix(base_opacity, 1.0, peak_mask);
+        
+        foam_mix = raw_foam * final_opacity * proximity_fade;
     }
     
+    // 6. MATERIAL DECOUPLING
     albedo_color = mix(albedo_color, color_foam, foam_mix);
     
+    // Flatten the normal map specifically where foam exists
+    NORMAL_MAP_DEPTH = normal_scale * storm_fade * (1.0 - foam_mix);
+    
     ALBEDO = albedo_color;
-    EMISSION = sss_emission * (1.0 - foam_mix);
-    ROUGHNESS = mix(0.02, 0.15, foam_mix);
-    SPECULAR = 0.5;
+    
+    // Inject artificial scattering into the foam layer
+    vec3 foam_emission = color_foam * foam_mix * 0.25; 
+    EMISSION = (sss_emission * (1.0 - foam_mix)) + foam_emission;
+    
+    // Strip gloss from the foam, making it rough and matte
+    ROUGHNESS = mix(0.02, 0.8, foam_mix);
+    SPECULAR = mix(0.5, 0.0, foam_mix);
 }
