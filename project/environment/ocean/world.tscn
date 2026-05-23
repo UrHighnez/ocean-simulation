@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://cvaw6kwh8c8f7" path="res://environment/ocean/ocean_manager.tscn" id="1_jhmie"]
 [ext_resource type="Resource" uid="uid://d3cuhif8hs61v" path="res://assets/resources/default_wave_profile.tres" id="2_ihtww"]
 [ext_resource type="Material" uid="uid://b6rnacuidh0nv" path="res://render/materials/default_material.tres" id="2_q5gix"]
-[ext_resource type="Script" uid="uid://p5q2scbuc4hs" path="res://environment/ocean/debug_floater.gd" id="2_tpfd3"]
+[ext_resource type="Script" uid="uid://gusq5788nda3" path="res://core/managers/buoyancy_3d.gd" id="4_ihtww"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_f3sb7"]
 ground_bottom_color = Color(0.35686275, 0.42352942, 0.49019608, 1)
@@ -19,6 +19,8 @@ fog_enabled = true
 fog_light_color = Color(0.6431373, 0.654902, 0.6666667, 1)
 fog_density = 0.02
 fog_aerial_perspective = 1.0
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_ihtww"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_tpfd3"]
 
@@ -39,12 +41,32 @@ environment = SubResource("Environment_fj7yv")
 wave_profile = ExtResource("2_ihtww")
 camera = NodePath("../Camera3D")
 
-[node name="Node3D" type="Node3D" parent="." unique_id=2023941901]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
-script = ExtResource("2_tpfd3")
-profile = ExtResource("2_ihtww")
+[node name="BuoyRigidBody3D" type="RigidBody3D" parent="." unique_id=1497902419]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 10)
 
-[node name="DebugSphere" type="MeshInstance3D" parent="Node3D" unique_id=987926447]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BuoyRigidBody3D" unique_id=608918933]
+shape = SubResource("SphereShape3D_ihtww")
+
+[node name="DebugBuoyMesh" type="MeshInstance3D" parent="BuoyRigidBody3D/CollisionShape3D" unique_id=987926447]
 material_override = ExtResource("2_q5gix")
 mesh = SubResource("SphereMesh_tpfd3")
 surface_material_override/0 = SubResource("StandardMaterial3D_ihtww")
+
+[node name="Buoyancy3D" type="Node3D" parent="BuoyRigidBody3D" unique_id=2023941901 node_paths=PackedStringArray("sample_points")]
+script = ExtResource("4_ihtww")
+wave_profile = ExtResource("2_ihtww")
+sample_points = [NodePath("../BuoyancyMarkers/BuoyancyMarker3D"), NodePath("../BuoyancyMarkers/BuoyancyMarker3D2"), NodePath("../BuoyancyMarkers/BuoyancyMarker3D3"), NodePath("../BuoyancyMarkers/BuoyancyMarker3D4")]
+
+[node name="BuoyancyMarkers" type="Node3D" parent="BuoyRigidBody3D" unique_id=1465878916]
+
+[node name="BuoyancyMarker3D" type="Marker3D" parent="BuoyRigidBody3D/BuoyancyMarkers" unique_id=709970841]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+
+[node name="BuoyancyMarker3D2" type="Marker3D" parent="BuoyRigidBody3D/BuoyancyMarkers" unique_id=817485566]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+
+[node name="BuoyancyMarker3D3" type="Marker3D" parent="BuoyRigidBody3D/BuoyancyMarkers" unique_id=383844613]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+
+[node name="BuoyancyMarker3D4" type="Marker3D" parent="BuoyRigidBody3D/BuoyancyMarkers" unique_id=2045377156]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)

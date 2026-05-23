@@ -2,45 +2,49 @@
 class_name WaveProfile
 extends Resource
 
-# Spiegelt die Wellengeometrie-Uniforms aus ocean.gdshader.
-# Wird sowohl in Shader-Uniforms gepusht als auch CPU-seitig
-# fuer Buoyancy/Physics gesampelt.
-# Resource.changed wird beim Inspector-Edit automatisch emittiert.
+## Wave parameters shared between shader uniforms and CPU sampling.
+## Identical values guarantee that rendering and physics stay in sync.
 
+## Primary wind direction in degrees (0 = +X axis).
 @export_range(0.0, 360.0) var wind_direction_degrees: float = 0.0:
 	set(value):
 		wind_direction_degrees = value
 		emit_changed()
 
+## Storm strength. Scales amplitude and wave speed non-linearly.
 @export_range(0.0, 1.0) var storm_intensity: float = 0.2:
 	set(value):
 		storm_intensity = value
 		emit_changed()
 
+## Global multiplier for wavelength and amplitude.
 @export var global_wave_scale: float = 1.0:
 	set(value):
 		global_wave_scale = value
 		emit_changed()
 
+## Gerstner steepness. High values produce sharp crests but can cause
+## vertex self-intersection ("pinching").
 @export_range(0.0, 1.5) var global_steepness: float = 0.8:
 	set(value):
 		global_steepness = value
 		emit_changed()
 
+## Animation speed of the wave motion.
 @export var time_scale: float = 0.7:
 	set(value):
 		time_scale = value
 		emit_changed()
 
+## Number of stacked Gerstner waves.
 @export_range(1, 8) var wave_iterations: int = 5:
 	set(value):
 		wave_iterations = value
 		emit_changed()
 
 
-# CPU-Port von calculate_gerstner_wave() aus ocean.gdshader.
-# storm_multiplier ersetzt das pro-Vertex wave_noise-Sampling
-# durch den Mittelwert (noise_val = 0.5 -> mix(0.5, 1.2, 0.5) = 0.85).
+## Samples the water surface at a world position and time.
+## Returns a Dictionary with "position" (Vector3) and "normal" (Vector3).
 func sample(world_xz: Vector2, time: float) -> Dictionary:
 	var tangent := Vector3(1.0, 0.0, 0.0)
 	var binormal := Vector3(0.0, 0.0, 1.0)
@@ -89,9 +93,11 @@ func sample(world_xz: Vector2, time: float) -> Dictionary:
 	}
 
 
+## Convenience wrapper: only the Y coordinate of the water surface.
 func sample_height(world_xz: Vector2, time: float) -> float:
 	return (sample(world_xz, time)["position"] as Vector3).y
 
 
+## Convenience wrapper: only the surface normal.
 func sample_normal(world_xz: Vector2, time: float) -> Vector3:
 	return sample(world_xz, time)["normal"]
