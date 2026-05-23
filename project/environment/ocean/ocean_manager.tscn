@@ -3,12 +3,18 @@
 [ext_resource type="Script" uid="uid://c7f4p4jsnn4e0" path="res://core/managers/ocean_manager.gd" id="1_tbrip"]
 [ext_resource type="Material" uid="uid://b2mi1ltn2s2cr" path="res://render/materials/water_material.tres" id="2_2rlpo"]
 [ext_resource type="PlaneMesh" uid="uid://cstnfck2c6cgh" path="res://assets/models/water_high.tres" id="3_mm3f0"]
+[ext_resource type="Script" uid="uid://wgvlhiy3robi" path="res://core/managers/wave_profile.gd" id="3_qafmu"]
 [ext_resource type="PlaneMesh" uid="uid://bdhnlx7isnk4k" path="res://assets/models/water_med.tres" id="4_k3vt1"]
 [ext_resource type="PlaneMesh" uid="uid://bmy2lj2age0ka" path="res://assets/models/water_low.tres" id="5_khhrd"]
+
+[sub_resource type="Resource" id="Resource_i21hf"]
+script = ExtResource("3_qafmu")
+metadata/_custom_type_script = "uid://wgvlhiy3robi"
 
 [node name="OceanManager" type="Node3D" unique_id=1175576111]
 script = ExtResource("1_tbrip")
 water_material = ExtResource("2_2rlpo")
+wave_profile = SubResource("Resource_i21hf")
 mesh_high = ExtResource("3_mm3f0")
 mesh_med = ExtResource("4_k3vt1")
 mesh_low = ExtResource("5_khhrd")

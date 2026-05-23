@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="WaveProfile" format=3 uid="uid://d3cuhif8hs61v"]
+
+[ext_resource type="Script" uid="uid://wgvlhiy3robi" path="res://core/managers/wave_profile.gd" id="1_hc4q3"]
+
+[resource]
+script = ExtResource("1_hc4q3")
+metadata/_custom_type_script = "uid://wgvlhiy3robi"
